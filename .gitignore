@@ -1,0 +1,24 @@
+# 本地录制和截图（可能含游戏画面，不进仓库）
+recordings/
+screenshots/
+*.mp4
+*.avi
+
+# 训练数据和模型权重
+datasets/
+*.pt
+*.onnx
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 本地配置和密钥
+.env
+profiles/local_*.yaml
+
+# 系统
+.DS_Store
+Thumbs.db
