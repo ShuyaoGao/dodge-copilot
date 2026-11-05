@@ -115,6 +115,9 @@ def test_danger_grid_shape():
     g = pol.danger_grid(obs_with([480, 360], [track([100, 100], [0, 0])]), stride=12)
     assert g.shape == (60, 80)
     assert g[100 // 12, 100 // 12] > g[50, 70]
+    ts = pol.ts.copy()
+    pol.danger_grid(obs_with([480, 360]))
+    assert np.array_equal(pol.ts, ts)  # 临时换掉的参数要还原
 
 
 def test_crosses_warning_line_to_escape_but_not_active_laser():

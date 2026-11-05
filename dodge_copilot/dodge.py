@@ -179,14 +179,25 @@ class DodgePolicy(Policy):
         return float(self.dirs[fi][0]), float(self.dirs[fi][1])
 
     # ------------------------------------------------------------------ 调试用
-    def danger_grid(self, obs: Observation, stride: int = 12) -> Optional[np.ndarray]:
-        """站着不动时每个位置的危险程度（给调试窗口画热力图）。"""
+    def danger_grid(self, obs: Observation, stride: int = 24, time_step: int = 3) -> Optional[np.ndarray]:
+        """站着不动时每个位置的危险程度（给调试画面画热力图）。
+
+        只是给人看的，所以格子粗一点、时间点少一点（每 time_step 个取一个，只看前 horizon_s 秒），
+        保证几毫秒内画完，不拖慢游戏。
+        """
         if obs.frame_size is None:
             return None
         w, h = obs.frame_size
         xs = np.arange(stride // 2, w, stride)
         ys = np.arange(stride // 2, h, stride)
         gx, gy = np.meshgrid(xs, ys)
-        S = np.stack([gx.ravel(), gy.ravel()], axis=1)[:, None, :].repeat(len(self.ts), axis=1)
-        c = self._point_cost(S + obs.cam_offset, obs) + self._region_cost(S, obs)
-        return c.reshape(len(ys), len(xs))
+        n = int(round(self.profile.predict.horizon_s / self.profile.predict.step_s))
+        idx = np.arange(time_step - 1, n, time_step)
+        saved = (self.ts, self.w_t, self.margin_t, self.warn_ramp)
+        try:
+            self.ts, self.w_t, self.margin_t, self.warn_ramp = (x[idx] for x in saved)
+            S = np.stack([gx.ravel(), gy.ravel()], axis=1)[:, None, :].repeat(len(idx), axis=1).astype(float)
+            c = self._point_cost(S + obs.cam_offset, obs) + self._region_cost(S, obs)
+        finally:
+            self.ts, self.w_t, self.margin_t, self.warn_ramp = saved
+        return c.reshape(len(ys), len(xs)) * time_step  # 乘回去，跟原来的分数大致同一量级
