@@ -3,7 +3,7 @@
 做法：
 1. 候选走法 = 先往方向 A 走一小段（first_segment_s），再往方向 B 走完（horizon_s）。
    方向有"不动 + 8 个方向"（手柄时 16 个方向）。两段式让助手能想到"先往左闪，再停下"。
-2. 每个危险物按当前速度往前推算；"会追人的"（一直转向玩家的敌人）假设它直奔玩家；
+2. 每个危险物按当前速度往前推算（可选：把"会追人的"敌人按直奔玩家来预测，默认关）；
    激光、闪电等区域类危险物当成原地不动。
 3. 对每个走法，沿途每隔 step_s 算一次"离危险物还有多远"，越近扣分越多，撞上扣大分。
    越往后越不确定，安全距离越大、权重越小。
@@ -95,7 +95,7 @@ class DodgePolicy(Policy):
         Hp = pos[None] + vel[None] * tt[:, None, None]  # (T, H, 2) 匀速直线
         d = np.linalg.norm(P[:, :, None, :] - Hp[None], axis=-1)  # (N, T, H)
         chase = np.array([h.pursuer for h in obs.hazards])
-        if chase.any():
+        if self.profile.predict.pursuit_model and chase.any():
             # 会追人的：假设它每时每刻都直奔玩家（按这条走法）那一刻的位置
             cp, cs = pos[chase], np.linalg.norm(vel[chase], axis=1)
             to_p = P[:, :, None, :] - cp[None, None]  # (N, T, C, 2)
