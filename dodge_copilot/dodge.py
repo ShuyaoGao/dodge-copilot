@@ -59,13 +59,16 @@ class DodgePolicy(Policy):
             stick = profile.input.backend == "gamepad" or (profile.sim is not None and profile.sim.stick)
             n_dirs = 16 if stick else 8
         self.dirs = direction_set(n_dirs)
-        self.ts = np.arange(1, int(round(pc.horizon_s / pc.step_s)) + 1) * pc.step_s
+        # 前 horizon_s 秒按走法移动；之后再看同样长的一段，假设玩家停在终点不动，
+        # 免得选一条"眼下安全、但停在子弹来路上"的路
+        n = int(round(pc.horizon_s / pc.step_s))
+        self.ts = np.arange(1, 2 * n + 1) * pc.step_s
         t1 = min(pc.first_segment_s, pc.horizon_s)
         k = len(self.dirs)
         a1 = np.repeat(self.dirs, k, axis=0)  # (K*K, 2)
         a2 = np.tile(self.dirs, (k, 1))
         self.first_idx = np.repeat(np.arange(k), k)
-        tt = self.ts[None, :, None]
+        tt = np.minimum(self.ts, pc.horizon_s)[None, :, None]
         seg1 = np.minimum(tt, t1)
         seg2 = np.maximum(tt - t1, 0)
         self.disp = self.speed * (a1[:, None, :] * seg1 + a2[:, None, :] * seg2)  # (P, T, 2)
@@ -74,6 +77,7 @@ class DodgePolicy(Policy):
         delay = profile.hazards.telegraph_delay_s
         self.warn_ramp = np.clip((self.ts + self.latency - 0.5 * delay) / (0.5 * delay + 1e-6), 0.05, 1.0)
         self.w_t = np.exp(-self.ts / max(pc.horizon_s, 1e-6))
+        self.w_t[n:] *= 0.5  # 停在终点之后的那段只是参考
         self.margin_t = pc.safety_margin_px + pc.uncertainty_px_per_s * self.ts
         self.reset()
 

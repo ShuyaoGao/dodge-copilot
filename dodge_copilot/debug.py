@@ -28,7 +28,7 @@ def draw_debug(frame: np.ndarray, obs: Observation, policy=None, heatmap: bool =
                text: Optional[str] = None) -> np.ndarray:
     img = frame.copy()
     off = obs.cam_offset
-    horizon = getattr(policy, "ts", np.array([0.6]))[-1] if policy is not None else 0.6
+    horizon = policy.profile.predict.horizon_s if hasattr(policy, "profile") else 0.5
 
     if heatmap and policy is not None and hasattr(policy, "danger_grid") and obs.player is not None:
         grid = policy.danger_grid(obs)

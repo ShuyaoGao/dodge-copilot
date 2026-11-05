@@ -111,14 +111,14 @@ class TakeoverConfig:
 
 @dataclass
 class PredictConfig:
-    horizon_s: float = 0.6  # 往前推算多少秒（0.2-1）
+    horizon_s: float = 0.5  # 往前推算多少秒（0.2-1）
     step_s: float = 1 / 30  # 推算的时间步长
     first_segment_s: float = 0.2  # 每个候选走法 = 先往一个方向走这么久，再换一个方向走完
     safety_margin_px: float = 4.0  # 和危险物至少再隔开这么多像素
-    uncertainty_px_per_s: float = 40.0  # 越往后越不确定，安全距离每秒多加这么多
+    uncertainty_px_per_s: float = 15.0  # 越往后越不确定，安全距离每秒多加这么多
     edge_margin_px: float = 80.0  # 离画面边缘小于这个距离就开始扣分（镜头固定时）
     center_weight: float = 0.4  # 往画面中间靠的倾向（镜头固定时）
-    inertia: float = 0.6  # 换方向的代价，越大越不抖
+    inertia: float = 0.2  # 换方向的代价，越大越不抖
     # 把"会追人的"危险物按"直奔玩家"来预测。测试游戏上这样反而更差（太悲观，助手会慌），默认关
     pursuit_model: bool = False
     latency_s: float = 0.0  # 从截屏到游戏收到按键大约多久；助手会往前多推算这么久

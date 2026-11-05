@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     b = sub.add_parser("bench", help="存活时间基准：同一组种子下各策略存活多久")
     b.add_argument("--profile", default="profiles/testgame.yaml")
     b.add_argument("--policies", default="idle,random")
-    b.add_argument("--seeds", default="20", help="20 表示 0-19；也可以写 3-7 或 1,5,9")
+    b.add_argument("--seeds", default="100-119", help="20 表示 0-19；也可以写 3-7 或 1,5,9。默认 100-119（调参没用过的种子）")
     b.add_argument("--max-time", type=float, default=60.0)
     b.add_argument("--camera", choices=["fixed", "follow"], default=None, help="测试游戏的镜头方式")
     b.add_argument("--jobs", type=int, default=1, help="同时跑几局（多核机器上加快）")
@@ -77,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             apply_camera(profile, args.camera)
         if args.latency is not None:
             profile.sim.latency_frames = args.latency
+            profile.predict.latency_s = args.latency / 60  # 助手知道有这么多延迟，会往前多推算
         res = run_bench(profile, policies, seeds, args.max_time, jobs=args.jobs)
         print()
         print(format_table(res, args.max_time))

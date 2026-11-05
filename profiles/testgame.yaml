@@ -36,7 +36,7 @@ takeover:
   auto_resume_after_s: null   # 玩家抢回控制后不自动恢复，要再按 F8
 
 predict:
-  horizon_s: 0.6
+  horizon_s: 0.5
 
 sim:
   camera: fixed          # fixed：固定场地；follow：镜头跟随玩家
