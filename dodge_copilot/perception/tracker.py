@@ -28,10 +28,13 @@ class Track:
         self.pursuit_cos = 0.0  # 速度方向和"指向玩家的方向"夹角余弦，平滑后的
         self.first_bearing: Optional[float] = None
         self.bearing_change = 0.0  # 玩家相对它的方位变了多少（弧度）
+        self.first_heading: Optional[float] = None
+        self.heading_change = 0.0  # 它自己的飞行方向转了多少（弧度）；直线子弹不会转
 
     @property
     def pursuer(self) -> bool:
-        return self.hits >= 12 and self.pursuit_cos > 0.985 and self.bearing_change > math.radians(15)
+        return (self.hits >= 12 and self.pursuit_cos > 0.985 and self.bearing_change > math.radians(15)
+                and self.heading_change > math.radians(12))
 
     def observe_player(self, player: np.ndarray) -> None:
         if self.hits < 3:
@@ -42,6 +45,12 @@ class Track:
         if dist < 1e-6 or speed < 30:
             self.pursuit_cos *= 0.9
             return
+        heading = math.atan2(self.x[3], self.x[2])
+        if self.hits >= 6:
+            if self.first_heading is None:
+                self.first_heading = heading
+            dh = abs((heading - self.first_heading + math.pi) % (2 * math.pi) - math.pi)
+            self.heading_change = max(self.heading_change, dh)
         bearing = math.atan2(to_p[1], to_p[0])
         if self.first_bearing is None:
             self.first_bearing = bearing
