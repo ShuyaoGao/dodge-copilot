@@ -119,6 +119,8 @@ class PredictConfig:
     edge_margin_px: float = 80.0  # 离画面边缘小于这个距离就开始扣分（镜头固定时）
     center_weight: float = 0.4  # 往画面中间靠的倾向（镜头固定时）
     inertia: float = 0.2  # 换方向的代价，越大越不抖
+    # 走完之后再看 horizon_s 秒（假设玩家停在终点）的权重；0 = 不看
+    tail_weight: float = 0.5
     # 把"会追人的"危险物按"直奔玩家"来预测。测试游戏上这样反而更差（太悲观，助手会慌），默认关
     pursuit_model: bool = False
     latency_s: float = 0.0  # 从截屏到游戏收到按键大约多久；助手会往前多推算这么久

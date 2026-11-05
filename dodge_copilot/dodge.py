@@ -77,7 +77,7 @@ class DodgePolicy(Policy):
         delay = profile.hazards.telegraph_delay_s
         self.warn_ramp = np.clip((self.ts + self.latency - 0.5 * delay) / (0.5 * delay + 1e-6), 0.05, 1.0)
         self.w_t = np.exp(-self.ts / max(pc.horizon_s, 1e-6))
-        self.w_t[n:] *= 0.5  # 停在终点之后的那段只是参考
+        self.w_t[n:] *= pc.tail_weight  # 停在终点之后的那段只是参考
         self.margin_t = pc.safety_margin_px + pc.uncertainty_px_per_s * self.ts
         self.reset()
 
