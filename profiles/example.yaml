@@ -1,0 +1,46 @@
+# 示例配置：给一个"镜头跟随玩家、俯视角弹幕"的单机游戏用。
+# 复制一份改名为 profiles/<游戏名>.yaml 再改；只想自己用、不想进 git 的，命名为 profiles/local_<名字>.yaml。
+# M2 会提供标定工具，截一张图点几下就能生成大部分参数。
+name: example
+genre: P1                  # P1 弹幕躲闪 / P2 挖矿打虫 / P3 平台跳跃
+
+capture:
+  backend: dxcam           # dxcam（快）或 mss（备用）
+  region: [0, 0, 1920, 1080]   # 截屏区域 [x, y, 宽, 高]，一般就是游戏窗口
+  target_fps: 60
+
+player:
+  mode: fixed_center       # 镜头跟着玩家走，玩家固定在画面中心，不用检测
+  size: [40, 48]           # 角色在画面上大约多大（像素）
+  speed_px_s: 300          # 角色移动速度，可以用标定工具测
+  hit_radius: 14
+
+hazards:
+  min_brightness: 170      # 危险物通常又亮又饱和
+  min_saturation: 90
+  colors:                  # 可选：再指定几种危险物颜色（HSV）
+    - {lower: [0, 150, 150], upper: [10, 255, 255]}   # 红色子弹
+  min_area: 10
+  max_area: 6000
+
+ignore_regions:            # 血条、分数、小地图等界面元素 [x, y, 宽, 高]
+  - [0, 0, 400, 80]
+  - [1600, 0, 320, 320]
+
+input:
+  backend: keyboard        # gamepad（虚拟手柄，走位更顺）或 keyboard
+  keys: {up: W, down: S, left: A, right: D}
+
+hotkeys:
+  toggle: F8
+  estop: F12
+
+takeover:
+  auto_resume_after_s: null
+
+predict:
+  horizon_s: 0.6
+
+debug:
+  show_window: false
+  record: false

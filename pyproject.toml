@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dodge-copilot"
+version = "0.1.0"
+description = "单机肉鸽走位助手：只看屏幕画面，替你躲子弹"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python>=4.8",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+testgame = ["pygame>=2.5"]
+windows = ["dxcam", "mss", "keyboard", "vgamepad"]
+dev = ["pygame>=2.5", "pytest>=8"]
+
+[tool.setuptools]
+packages = ["dodge_copilot", "dodge_copilot.io", "dodge_copilot.perception", "testgame"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

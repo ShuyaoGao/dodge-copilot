@@ -1,0 +1,46 @@
+# 测试游戏用的配置。测试模式下截屏和输入都直接对接测试游戏。
+name: testgame
+genre: P1
+
+capture:
+  backend: sim
+
+player:
+  mode: color            # 按颜色找玩家（测试游戏里的绿色方块）
+  color:
+    lower: [50, 120, 120]   # HSV 下限
+    upper: [70, 255, 255]   # HSV 上限
+  size: [16, 16]
+  speed_px_s: 240
+  hit_radius: 6
+
+hazards:
+  min_brightness: 170
+  min_saturation: 90
+  min_area: 6
+  max_area: 4000
+
+# 左上角是时间和"血条"，忽略
+ignore_regions:
+  - [0, 0, 240, 48]
+
+input:
+  backend: sim
+  keys: {up: up, down: down, left: left, right: right}
+
+hotkeys:
+  toggle: F8
+  estop: F12
+
+takeover:
+  auto_resume_after_s: null   # 玩家抢回控制后不自动恢复，要再按 F8
+
+predict:
+  horizon_s: 0.6
+
+sim:
+  camera: fixed          # fixed：固定场地；follow：镜头跟随玩家
+  difficulty: 1.0
+  width: 960
+  height: 720
+  stick: false
