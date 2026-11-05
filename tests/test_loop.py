@@ -55,7 +55,7 @@ def test_frame_pipeline_with_color_locator_and_timer():
             return (0.0, 0.0)
 
     orig = bench.build_policy
-    bench.build_policy = lambda name, seed: Watcher()
+    bench.build_policy = lambda name, seed, profile=None: Watcher()
     try:
         r = run_episode(profile(), "watch", 0, max_time=1.0)
     finally:
@@ -91,3 +91,19 @@ def test_sim_app_headless_hotkeys_and_override():
     assert "自动交还" in reasons[1] and reasons[-1] == "急停"
     assert c.stopped
     assert c.sink.down == set()
+
+
+def test_sim_app_with_assist_debug_and_recording(tmp_path, monkeypatch):
+    from dodge_copilot.app import run_sim
+    from dodge_copilot.control import Mode
+
+    monkeypatch.chdir(tmp_path)  # 录制写到临时目录的 recordings/
+    p = profile()
+    script = {2: [("keydown", "F8"), ("keydown", "F2")], 40: [("keydown", "F8")]}
+    c = run_sim(p, "assist", 0, max_frames=60, headless=True, script=script, record=True)
+    assert [m for _, m, _ in c.switch_log] == [Mode.ASSIST, Mode.PLAYER]
+    runs = list((tmp_path / "recordings").iterdir())
+    assert len(runs) == 1
+    lines = (runs[0] / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+    assert 30 <= len(lines) <= 40  # 只录接管期间
+    assert len(list(runs[0].glob("*.jpg"))) == len(lines)

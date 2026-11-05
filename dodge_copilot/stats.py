@@ -45,6 +45,10 @@ class FrameTimer:
         span = self.frame_starts[-1] - self.frame_starts[0]
         return (len(self.frame_starts) - 1) / span if span > 0 else 0.0
 
-    def summary(self) -> str:
+    def summary(self, ascii: bool = False) -> str:
+        """ascii=True 时用英文（OpenCV 在画面上写不了中文）。"""
+        if ascii:
+            parts = [f"{s} {self.mean_ms(s):.1f}" for s in STAGES]
+            return " | ".join(parts) + f" | total {self.mean_ms('total'):.1f} ms | {self.fps():.0f} fps"
         parts = [f"{STAGE_NAMES[s]} {self.mean_ms(s):.1f}" for s in STAGES]
         return " | ".join(parts) + f" | 合计 {self.mean_ms('total'):.1f} ms | {self.fps():.0f} 帧/秒"

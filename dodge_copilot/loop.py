@@ -19,7 +19,10 @@ class Copilot:
         policy: Policy,
         controller: TakeoverController,
         timer: Optional[FrameTimer] = None,
+        frame_time: Optional[Callable[[], float]] = None,
     ) -> None:
+        """frame_time：截到的画面是哪个时刻的（测试模式模拟延迟时用）。不给就用 step() 的 t。"""
+        self.frame_time = frame_time
         self.grab = grab
         self.perception = perception
         self.policy = policy
@@ -37,6 +40,8 @@ class Copilot:
         if self.policy.needs_frame:
             with tm.stage("capture"):
                 frame = self.grab()
+            if self.frame_time is not None:
+                t = self.frame_time()
         with tm.stage("perceive"):
             obs = self.perception.update(frame, t)
         with tm.stage("decide"):

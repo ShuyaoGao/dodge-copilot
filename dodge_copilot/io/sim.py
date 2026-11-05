@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import math
+from collections import deque
 
 import numpy as np
 
@@ -64,9 +65,21 @@ class SimBridge:
         else:
             self.sink = SimKeyboardSink(self.keymap)
         self.human_keys: set[str] = set()  # 玩家按着的逻辑方向
+        self.latency_frames = profile.sim.latency_frames
+        self._frames: deque[tuple[float, np.ndarray]] = deque(maxlen=self.latency_frames + 1)
 
     def grab(self) -> np.ndarray:
-        return self.game.render()
+        """返回画面。latency_frames > 0 时返回几帧之前的画面，模拟真实截屏的延迟。"""
+        self._frames.append((self.game.time, self.game.render()))
+        return self._frames[0][1]
+
+    def frame_time(self) -> float:
+        """最近一次 grab() 返回的画面是游戏里哪个时刻的。"""
+        return self._frames[0][0] if self._frames else self.game.time
+
+    def reset(self, game: Game) -> None:
+        self.game = game
+        self._frames.clear()
 
     def game_move(self) -> tuple[float, float]:
         keys = set(self.human_keys)

@@ -1,6 +1,7 @@
 """测试模式的交互窗口：你自己玩测试游戏，按接管键让助手接手。
 
-操作：方向键 / WASD 移动；F8 接管/交还；F12 急停；R 重开；F3 显示/隐藏耗时。
+操作：方向键 / WASD 移动；F8 接管/交还；F12 急停；R 重开；
+F2 显示/隐藏调试画面；F3 显示/隐藏耗时。
 """
 from __future__ import annotations
 
@@ -12,10 +13,12 @@ import numpy as np
 
 from .config import Profile
 from .control import Mode, TakeoverController
+from .debug import draw_debug
 from .io.sim import SimBridge, make_game
 from .loop import Copilot
 from .perception import Perception
 from .policy import build_policy
+from .record import Recorder
 from .safety import ReleaseGuard
 
 CJK_FONTS = ["microsoftyahei", "simhei", "pingfangsc", "notosanscjksc", "wenquanyizenhei",
@@ -69,7 +72,8 @@ class StatusBadge:
 
 def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
             max_frames: Optional[int] = None, headless: bool = False,
-            script: Optional[dict[int, list[tuple[str, str]]]] = None) -> TakeoverController:
+            script: Optional[dict[int, list[tuple[str, str]]]] = None,
+            record: Optional[bool] = None) -> TakeoverController:
     """script：自动化测试用，{帧号: [(动作, 参数)]}，动作是 keydown/keyup，参数是热键名或方向。"""
     if headless:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -94,9 +98,14 @@ def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
     bridge = SimBridge(game, profile)
     controller = TakeoverController(bridge.sink, profile.takeover.auto_resume_after_s,
                                     on_change=on_change)
-    policy = build_policy(policy_name, seed)
-    copilot = Copilot(bridge.grab, Perception(profile), policy, controller)
+    policy = build_policy(policy_name, seed, profile)
+    perception = Perception(profile)
+    copilot = Copilot(bridge.grab, perception, policy, controller, frame_time=bridge.frame_time)
+    # 交互窗口里总是要看画面（调试画面要用），所以基准策略也照样截屏和识别
+    policy.needs_frame = True
     show_timing = True
+    show_debug = profile.debug.show_window
+    recorder = Recorder() if (profile.debug.record if record is None else record) else None
     dt = 1.0 / 60
     frame_no = 0
 
@@ -104,11 +113,12 @@ def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
         nonlocal game
         controller.release("重开")
         game = make_game(profile, seed)
-        bridge.game = game
+        bridge.reset(game)
+        perception.reset()
         policy.reset()
 
     def handle_key(code: int, down: bool) -> None:
-        nonlocal show_timing
+        nonlocal show_timing, show_debug
         if down and code == estop_code:
             controller.estop()
         elif down and code == toggle_code:
@@ -121,6 +131,8 @@ def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
             restart()
         elif down and code == pygame.K_F3:
             show_timing = not show_timing
+        elif down and code == pygame.K_F2:
+            show_debug = not show_debug
 
     with ReleaseGuard(bridge.sink):
         try:
@@ -137,9 +149,23 @@ def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
                 if controller.stopped:
                     break
                 if game.alive:
-                    copilot.step(game.time)
+                    obs = copilot.step(game.time)
+                    if recorder is not None:
+                        if controller.assisting:
+                            if not recorder.active:
+                                print(f"开始录制：{recorder.start()}", flush=True)
+                            recorder.write(
+                                draw_debug(obs.frame, obs, policy) if obs.frame is not None else None,
+                                {"t": obs.t, "player": obs.player, "action": copilot.last_action,
+                                 "hazards": len(obs.hazards), "regions": obs.region_mask is not None,
+                                 "ms": {k: round(v[-1], 2) for k, v in copilot.timer.samples.items() if v}})
+                        elif recorder.active:
+                            recorder.stop()
                     game.step(bridge.game_move(), dt)
                 img = game.render()
+                obs = copilot.last_obs
+                if show_debug and obs is not None and obs.frame is not None:
+                    img = draw_debug(obs.frame, obs, policy)
                 surf = pygame.image.frombuffer(np.ascontiguousarray(img[:, :, ::-1]).tobytes(),
                                                (img.shape[1], img.shape[0]), "RGB")
                 screen.blit(surf, (0, 0))
@@ -160,6 +186,8 @@ def run_sim(profile: Profile, policy_name: str = "random", seed: int = 0,
                     clock.tick(60)
         finally:
             bridge.sink.release_all()
+            if recorder is not None:
+                recorder.stop()
             pygame.quit()
     return controller
 

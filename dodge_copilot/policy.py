@@ -1,8 +1,8 @@
 """决策：根据观察结果决定往哪走。
 
-M0 只有两个基准策略，用来和以后的"助手"比存活时间：
-- idle：不操作
-- random：随机乱走（随机选一个方向，按一小会儿，再换）
+- idle：不操作（基准）
+- random：随机乱走（基准：随机选一个方向，按一小会儿，再换）
+- assist：助手，看画面躲闪（见 dodge.py）
 """
 from __future__ import annotations
 
@@ -60,12 +60,18 @@ class RandomPolicy(Policy):
         return self._dir
 
 
-POLICIES = {"idle": IdlePolicy, "random": RandomPolicy}
+POLICIES = {"idle": IdlePolicy, "random": RandomPolicy, "assist": None}
 
 
-def build_policy(name: str, seed: int = 0) -> Policy:
+def build_policy(name: str, seed: int = 0, profile=None) -> Policy:
+    if name == "assist":
+        if profile is None:
+            raise ValueError("assist 策略需要配置文件")
+        from .dodge import DodgePolicy
+
+        return DodgePolicy(profile)
     if name == "idle":
         return IdlePolicy()
     if name == "random":
         return RandomPolicy(seed)
-    raise ValueError(f"不认识的策略 {name!r}，可选: {sorted(POLICIES)}（助手策略在 M1 加）")
+    raise ValueError(f"不认识的策略 {name!r}，可选: {sorted(POLICIES)}")

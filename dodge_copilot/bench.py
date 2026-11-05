@@ -32,8 +32,8 @@ def run_episode(profile: Profile, policy_name: str, seed: int, max_time: float =
     game = make_game(profile, seed)
     bridge = SimBridge(game, profile)
     controller = TakeoverController(bridge.sink)
-    policy = build_policy(policy_name, seed)
-    copilot = Copilot(bridge.grab, Perception(profile), policy, controller)
+    policy = build_policy(policy_name, seed, profile)
+    copilot = Copilot(bridge.grab, Perception(profile), policy, controller, frame_time=bridge.frame_time)
     controller.engage("基准测试：全程接管")
     dt = 1.0 / fps
     try:
@@ -45,18 +45,34 @@ def run_episode(profile: Profile, policy_name: str, seed: int, max_time: float =
     return EpisodeResult(policy_name, seed, game.time, game.death_cause, copilot.timer)
 
 
+def _job(args: tuple) -> EpisodeResult:
+    return run_episode(*args)
+
+
 def run_bench(profile: Profile, policies: list[str], seeds: list[int], max_time: float = 60.0,
-              verbose: bool = True) -> dict[str, list[EpisodeResult]]:
-    results: dict[str, list[EpisodeResult]] = {}
-    for name in policies:
-        results[name] = []
-        for s in seeds:
-            r = run_episode(profile, name, s, max_time)
-            results[name].append(r)
-            if verbose:
-                cause = r.death_cause or "撑满时间"
-                print(f"  {name:>8}  种子 {s:3d}  存活 {r.survival_s:6.2f} 秒  ({cause})", flush=True)
+              verbose: bool = True, jobs: int = 1) -> dict[str, list[EpisodeResult]]:
+    tasks = [(profile, name, s, max_time) for name in policies for s in seeds]
+    if jobs > 1:
+        import multiprocessing as mp
+
+        with mp.get_context("spawn").Pool(jobs) as pool:
+            done = pool.imap(_job, tasks)
+            out = list(_report(done, verbose))
+    else:
+        out = list(_report(map(_job, tasks), verbose))
+    results: dict[str, list[EpisodeResult]] = {name: [] for name in policies}
+    for r in out:
+        results[r.policy].append(r)
     return results
+
+
+def _report(it, verbose: bool):
+    for r in it:
+        if verbose:
+            cause = r.death_cause or "撑满时间"
+            print(f"  {r.policy:>8}  种子 {r.seed:3d}  存活 {r.survival_s:6.2f} 秒  ({cause})"
+                  f"  每帧 {r.timer.mean_ms('total'):.1f} ms", flush=True)
+        yield r
 
 
 def format_table(results: dict[str, list[EpisodeResult]], max_time: float) -> str:

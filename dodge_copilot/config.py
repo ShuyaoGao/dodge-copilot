@@ -67,8 +67,19 @@ class HazardConfig:
     min_saturation: int = 90
     # 按游戏调：额外指定危险物颜色（可不写）
     colors: list[ColorRange] = field(default_factory=list)
-    min_area: int = 6
-    max_area: int = 4000
+    min_area: int = 6  # 比这还小的色块当成噪点
+    max_area: int = 4000  # 比这还大的色块按"一片区域"处理，不按点处理
+    # 激光、闪电的预警线通常暗一些，只要是细长的线就算危险区域
+    line_min_brightness: int = 100
+    line_min_saturation: int = 70
+    line_min_length: int = 60
+    # 预警线（较暗的线）多久之后才会变成真的危险：在这之前可以穿过去
+    telegraph_delay_s: float = 0.3
+    region_pad: float = 8.0  # 区域类危险物（激光、闪电）往外多算几像素，预警线变成真激光会变粗
+    # 镜头跟着玩家走时打开：先估计画面整体平移，再追踪危险物
+    motion_compensation: bool = False
+    track_gate_px: float = 30.0  # 相邻两帧同一个危险物最多挪多远
+    track_max_misses: int = 3  # 连续几帧没看到就不再追踪
 
 
 @dataclass
@@ -101,6 +112,14 @@ class TakeoverConfig:
 @dataclass
 class PredictConfig:
     horizon_s: float = 0.6  # 往前推算多少秒（0.2-1）
+    step_s: float = 1 / 30  # 推算的时间步长
+    first_segment_s: float = 0.2  # 每个候选走法 = 先往一个方向走这么久，再换一个方向走完
+    safety_margin_px: float = 4.0  # 和危险物至少再隔开这么多像素
+    uncertainty_px_per_s: float = 40.0  # 越往后越不确定，安全距离每秒多加这么多
+    edge_margin_px: float = 80.0  # 离画面边缘小于这个距离就开始扣分（镜头固定时）
+    center_weight: float = 0.4  # 往画面中间靠的倾向（镜头固定时）
+    inertia: float = 0.6  # 换方向的代价，越大越不抖
+    latency_s: float = 0.0  # 从截屏到游戏收到按键大约多久；助手会往前多推算这么久
 
 
 @dataclass
@@ -119,6 +138,7 @@ class SimConfig:
     height: int = 720
     patterns: Optional[list[str]] = None  # 不写就是全部弹幕类型
     stick: bool = False  # true：模拟手柄摇杆（连续方向）；false：模拟方向键（8 方向）
+    latency_frames: int = 0  # 模拟截屏延迟：助手看到的是几帧之前的画面
 
 
 @dataclass
