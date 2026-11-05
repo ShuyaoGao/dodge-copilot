@@ -89,7 +89,8 @@ def _dist_map(mask: np.ndarray, k: int) -> np.ndarray:
     # 缩小时只要格子里有一点危险就算危险，距离再乘回去
     small = cv2.resize(cv2.dilate(mask, np.ones((k, k), np.uint8)),
                        (mask.shape[1] // k, mask.shape[0] // k), interpolation=cv2.INTER_NEAREST)
-    return cv2.distanceTransform(255 - small, cv2.DIST_L2, 3) * k
+    d = cv2.distanceTransform(255 - small, cv2.DIST_L2, 3)
+    return np.minimum(d, 1e4) * k  # 全图没有危险像素时它返回一个极大值
 
 
 def build_player_locator(profile: Profile) -> PlayerLocator:
